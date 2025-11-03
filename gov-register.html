@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>CityFix — Pilot Application</title>
+<style>
+  body{font-family:Poppins;background:#f3f7fb;margin:0;padding:18px;color:#102132}
+  .box{max-width:720px;margin:30px auto;background:#fff;padding:18px;border-radius:12px}
+  label{display:block;margin-top:10px;font-weight:600}
+  input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid #d6dbe3}
+  button{margin-top:12px;padding:10px 14px;border-radius:8px;background:#2b82ff;color:white;border:none;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="box">
+  <h2>Apply for City Pilot Program</h2>
+  <p class="muted">Local governments can request a pilot in a selected city/zone. We'll contact you.</p>
+
+  <label>City / Municipality</label>
+  <input id="city" placeholder="e.g., Surat">
+
+  <label>Contact Person</label>
+  <input id="contact" placeholder="Name">
+
+  <label>Official Email</label>
+  <input id="email" placeholder="gov@example.gov">
+
+  <label>Target Zone / Ward</label>
+  <input id="zone" placeholder="Zone, Ward, or area name">
+
+  <label>Short Notes (optional)</label>
+  <textarea id="notes"></textarea>
+
+  <button onclick="submitPilot()">Submit Application</button>
+  <button onclick="goHome()" style="background:#ccc;color:#000;margin-left:10px">Cancel</button>
+</div>
+
+<script>
+function submitPilot(){
+  const city = document.getElementById('city').value.trim();
+  const contact = document.getElementById('contact').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const zone = document.getElementById('zone').value.trim();
+  const notes = document.getElementById('notes').value.trim();
+
+  if(!city || !contact || !email || !zone){ alert('Fill required fields'); return; }
+
+  const partners = JSON.parse(localStorage.getItem('govPartners') || '[]');
+  partners.push({
+    id: 'G'+Date.now(),
+    city, contact, email, zone, notes,
+    status: 'Pending',
+    appliedAt: new Date().toISOString()
+  });
+  localStorage.setItem('govPartners', JSON.stringify(partners));
+  alert('Application submitted. Admin will review it.');
+  location.href = 'index.html';
+}
+
+function goHome(){ location.href='index.html'; }
+</script>
+</body>
+</html>

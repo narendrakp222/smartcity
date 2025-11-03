@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>CityFix — Citizen Dashboard</title>
+<style>
+  /* Soft, modern dashboard (map-first friendly later) */
+  :root{
+    --bg:#07101a; --panel:#0e1622; --muted:#9fb0c6; --accent:#4af; --soft:#e6ecf5;
+  }
+  *{box-sizing:border-box;font-family:Poppins,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial}
+  body{margin:0;min-height:100vh;background:linear-gradient(180deg,#04101a,#072634);color:#dff2ff}
+  .wrap{display:flex;gap:18px;max-width:1200px;margin:24px auto;padding:0 16px}
+  /* Sidebar */
+  .sidebar{width:260px;background:var(--panel);border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,0.03)}
+  .brand{font-weight:800;font-size:20px;background:linear-gradient(90deg,var(--accent),#7fffd4);-webkit-background-clip:text;color:transparent}
+  .user{margin-top:14px;padding:12px;background:rgba(255,255,255,0.02);border-radius:8px}
+  .nav{margin-top:18px;display:flex;flex-direction:column;gap:8px}
+  .nav button{background:transparent;border:none;color:var(--muted);padding:10px 12px;border-radius:8px;text-align:left;cursor:pointer}
+  .nav button.active{background:rgba(255,255,255,0.02);color:#fff}
+  .small{font-size:13px;color:var(--muted)}
+  /* Main */
+  .main{flex:1}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+  .search {background:var(--panel);padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.02)}
+  .actions{display:flex;gap:10px;align-items:center}
+  .icon-btn{background:rgba(255,255,255,0.03);padding:8px;border-radius:10px;border:1px solid rgba(255,255,255,0.02);cursor:pointer;color:var(--muted)}
+  .notif-badge{background:#ff5f5f;color:white;border-radius:50%;padding:3px 7px;font-size:12px;margin-left:6px}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+  .card{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));padding:14px;border-radius:10px;border:1px solid rgba(255,255,255,0.03)}
+  .card h3{margin:0;font-size:18px}
+  .card p{margin:6px 0 0;color:var(--muted);font-size:13px}
+  .quick{display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+  .quick a{display:inline-block;padding:10px 14px;border-radius:10px;background:var(--accent);color:#001;font-weight:700;text-decoration:none}
+  /* Reports preview */
+  .list{background:var(--panel);padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.03)}
+  .report-row{display:flex;gap:12px;padding:10px;border-radius:10px;align-items:center;border-bottom:1px dashed rgba(255,255,255,0.02)}
+  .thumb{width:84px;height:60px;border-radius:8px;object-fit:cover;background:#0b1220}
+  .meta{flex:1}
+  .status{padding:6px 10px;border-radius:12px;font-weight:700}
+  .st-pend{background:#fff6dc;color:#7a5e00}
+  .st-prog{background:#dff1ff;color:#004a66}
+  .st-res{background:#e8ffe8;color:#0b5e18}
+  /* Notifications panel */
+  .panel-notif{position:absolute;right:30px;top:80px;background:var(--panel);width:320px;border-radius:10px;padding:12px;border:1px solid rgba(255,255,255,0.03);display:none}
+  .n-item{padding:8px;border-bottom:1px solid rgba(255,255,255,0.02);font-size:13px}
+  .n-item.unread{background:rgba(255,255,255,0.02)}
+  /* responsive */
+  @media (max-width:900px){.wrap{flex-direction:column;padding:12px}.sidebar{width:100%}.stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div style="max-width:1200px;margin:12px auto;position:relative">
+  <div class="wrap">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="brand">CityFix</div>
+      <div class="user" id="userBox">
+        <div id="welcome">Welcome, User</div>
+        <div class="small" id="userEmail">—</div>
+      </div>
+      <div class="nav">
+        <button class="active" onclick="goReport()">Report Issue</button>
+        <button onclick="goMyReports()">My Reports</button>
+        <button onclick="goHome()">Home</button>
+        <button style="color:#ff7b7b" onclick="logout()">Logout</button>
+      </div>
+      <div style="margin-top:20px" class="small">Pilot program: <strong id="pilotInfo">No active pilot</strong></div>
+    </aside>
+
+    <!-- MAIN -->
+    <section class="main">
+      <div class="topbar">
+        <div>
+          <h2 id="titleMain">Citizen Dashboard</h2>
+          <div class="small">Track your reports & see updates</div>
+        </div>
+
+        <div class="actions">
+          <div class="search"><input id="searchInput" placeholder="Search my reports" style="background:transparent;border:none;color:#dff;outline:none;width:180px"></div>
+          <div style="position:relative">
+            <button class="icon-btn" id="notifBtn" onclick="toggleNotif()">🔔 <span id="notifBadge" class="notif-badge" style="display:none"></span></button>
+            <div class="panel-notif" id="notifPanel"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats" id="statsRow">
+        <div class="card"><h3 id="s-total">0</h3><p>Total Reports</p></div>
+        <div class="card"><h3 id="s-pending">0</h3><p>Pending</p></div>
+        <div class="card"><h3 id="s-progress">0</h3><p>In-Progress</p></div>
+        <div class="card"><h3 id="s-resolved">0</h3><p>Resolved</p></div>
+      </div>
+
+      <div class="quick">
+        <a href="report.html">+ New Report</a>
+        <a href="my-reports.html" style="background:#8ed0ff;color:#003d66">My Reports</a>
+      </div>
+
+      <div class="list" id="recentList">
+        <div style="color:var(--muted);margin-bottom:8px">Recent activity</div>
+        <div id="rows"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- notification popup -->
+  <div id="notifPanelTemplate" style="display:none">
+    <div style="padding:10px"><strong>Notifications</strong> <button style="float:right" onclick="markAllRead()">Mark all read</button></div>
+    <div id="nlist"></div>
+  </div>
+</div>
+
+<script>
+/* ---------- Helpers & storage keys ---------- */
+const REPORT_KEY = 'reports';
+const NOTIF_KEY = 'notifications';
+const ACTIVE_KEY = 'activeUser';
+
+function getActive(){ return JSON.parse(localStorage.getItem(ACTIVE_KEY) || 'null'); }
+function getReports(){ return JSON.parse(localStorage.getItem(REPORT_KEY) || '[]'); }
+function getNotifs(){ return JSON.parse(localStorage.getItem(NOTIF_KEY) || '[]'); }
+function saveNotifs(n){ localStorage.setItem(NOTIF_KEY, JSON.stringify(n)); }
+function saveReports(r){ localStorage.setItem(REPORT_KEY, JSON.stringify(r)); }
+
+/* ---------- Init UI ---------- */
+const me = getActive();
+if(!me){ alert('Please login first'); location.href='login.html'; }
+document.getElementById('welcome').innerText = `Welcome, ${me.name || me.email.split('@')[0]} 👋`;
+document.getElementById('userEmail').innerText = me.email;
+
+/* pilot summary (optional) */
+const govs = JSON.parse(localStorage.getItem('govPartners')||'[]');
+const approved = govs.find(g=>g.status==='Approved');
+document.getElementById('pilotInfo').innerText = approved ? `${approved.city} — ${approved.zone}` : 'No active pilot';
+
+/* render stats & recent */
+function renderDashboard(){
+  const reports = getReports().filter(r=>r.userEmail === me.email);
+  const total = reports.length;
+  const pending = reports.filter(r=>r.status==='Pending').length;
+  const prog = reports.filter(r=>r.status==='In-Progress').length;
+  const resolved = reports.filter(r=>r.status==='Resolved').length;
+
+  document.getElementById('s-total').innerText = total;
+  document.getElementById('s-pending').innerText = pending;
+  document.getElementById('s-progress').innerText = prog;
+  document.getElementById('s-resolved').innerText = resolved;
+
+  // recent rows
+  const rows = document.getElementById('rows');
+  rows.innerHTML = '';
+  if(total===0){ rows.innerHTML = '<div class="small">No reports yet — submit a new report.</div>'; return; }
+
+  reports.slice().reverse().slice(0,6).forEach(r=>{
+    const div = document.createElement('div'); div.className='report-row';
+    div.innerHTML = `
+      <img class="thumb" src="${r.photo || ''}" onerror="this.style.display='none'">
+      <div class="meta">
+        <div style="font-weight:700;color:#fff">${escapeHtml(r.title)}</div>
+        <div class="small">${r.category} • ${new Date(r.createdAt).toLocaleString()}</div>
+      </div>
+      <div>
+        <div class="status ${r.status==='Pending'?'st-pend':r.status==='In-Progress'?'st-prog':'st-res'}">${r.status}</div>
+      </div>`;
+    rows.appendChild(div);
+  });
+}
+
+/* ---------- Notifications UI ---------- */
+function computeUnread(){
+  const nots = getNotifs().filter(n=>n.email===me.email && !n.read);
+  return nots.length;
+}
+function renderNotifPanel(){
+  const panel = document.getElementById('notifPanel');
+  const nots = getNotifs().filter(n=>n.email===me.email).sort((a,b)=>b.time.localeCompare(a.time));
+  let html = '<div style="padding:8px 0 6px 6px"><strong>Notifications</strong></div>';
+  if(nots.length===0) html += '<div style="padding:8px;color:var(--muted)">No notifications</div>';
+  nots.forEach(n=>{
+    html += `<div class="n-item ${n.read? '':'unread'}">
+      <div style="font-size:12px;color:#cfe">${n.time}</div>
+      <div style="margin-top:6px">${escapeHtml(n.message)}</div>
+    </div>`;
+  });
+  html += '<div style="padding:8px;text-align:center"><button onclick="markAllRead()" class="icon-btn">Mark all read</button></div>';
+  panel.innerHTML = html;
+  // badge
+  const badge = document.getElementById('notifBadge');
+  const unread = computeUnread();
+  if(unread>0){ badge.style.display='inline-block'; badge.innerText = unread; } else badge.style.display='none';
+}
+
+/* toggle panel */
+function toggleNotif(){
+  const p = document.getElementById('notifPanel');
+  if(p.style.display==='flex'){ p.style.display='none'; } 
+  else { renderNotifPanel(); p.style.display='flex'; p.style.flexDirection='column'; }
+}
+
+/* mark read */
+function markAllRead(){
+  let nots = getNotifs();
+  nots = nots.map(n=> n.email===me.email ? {...n, read:true} : n );
+  saveNotifs(nots);
+  renderNotifPanel();
+  renderDashboard();
+}
+
+/* ---------- Navigation helpers ---------- */
+function goReport(){ location.href='report.html'; }
+function goMyReports(){ location.href='my-reports.html'; }
+function goHome(){ location.href='index.html'; }
+function logout(){ localStorage.removeItem('activeUser'); location.href='index.html'; }
+
+/* ---------- helpers ---------- */
+function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ---------- init ---------- */
+renderDashboard();
+renderNotifPanel();
+
+</script>
+</body>
+</html>

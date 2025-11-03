@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>CityFix | Smart City Reporting System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Poppins", sans-serif;
+        }
+
+        body {
+            background: #0b0f19;
+            color: #fff;
+            overflow-x: hidden
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 50px;
+            background: #0f1629;
+            border-bottom: 1px solid rgba(255, 255, 255, .1)
+        }
+
+        .logo {
+            font-size: 26px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #4af, #7fffd4);
+            -webkit-background-clip: text;
+            color: transparent
+        }
+
+        nav a {
+            color: #bbb;
+            text-decoration: none;
+            margin: 0 15px;
+            font-size: 14px;
+            transition: .2s
+        }
+
+        nav a:hover {
+            color: #4af
+        }
+
+        /* Hero */
+        .hero {
+            text-align: center;
+            padding: 120px 20px
+        }
+
+        .hero h1 {
+            font-size: 50px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #4af, #7fffd4);
+            -webkit-background-clip: text;
+            color: transparent
+        }
+
+        .hero p {
+            font-size: 18px;
+            color: #aaa;
+            max-width: 540px;
+            margin: 12px auto 35px
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-size: 15px;
+            border: 1px solid rgba(255, 255, 255, .2);
+            cursor: pointer;
+            margin: 8px;
+            background: #121b33;
+            color: #fff;
+            transition: .2s
+        }
+
+        .btn:hover {
+            transform: scale(.96);
+            border-color: #4af;
+            color: #4af
+        }
+
+        .citizen {
+            border-color: #4af
+        }
+
+        .admin {
+            border-color: #ff9f43;
+            color: #ff9f43
+        }
+
+        .pilot {
+            border-color: #00ffbf;
+            color: #00ffbf
+        }
+
+        .pilot:hover {
+            color: #00ffbf
+        }
+
+        /* Info Blocks */
+        .section-title {
+            text-align: center;
+            font-size: 26px;
+            margin: 50px 0 15px
+        }
+
+        .icon-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 20px;
+            padding: 0 40px;
+            margin-bottom: 60px
+        }
+
+        .icon-card {
+            background: #111827;
+            border: 1px solid rgba(255, 255, 255, .08);
+            padding: 18px;
+            border-radius: 12px;
+            text-align: center;
+            transition: .2s
+        }
+
+        .icon-card:hover {
+            transform: translateY(-5px);
+            border-color: #4af
+        }
+
+        .icon-card span {
+            font-size: 34px;
+            display: block;
+            margin-bottom: 10px
+        }
+
+        /* Pilot Notice */
+        .pilot-box {
+            margin: 25px auto;
+            padding: 15px 20px;
+            background: #091422;
+            border-left: 4px solid #00ffbf;
+            width: 85%;
+            border-radius: 10px;
+            font-size: 14px;
+            color: #aaf;
+        }
+
+        .pilot-box strong {
+            color: #00ffbf
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+            font-size: 13px
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="logo">CityFix</div>
+        <nav>
+            <a href="#">Home</a>
+            <a href="#">About</a>
+            <a href="#" onclick="goLogin()">Report</a>
+        </nav>
+    </header>
+
+    <section class="hero">
+        <h1>Smart City Issue Reporter</h1>
+        <p>AI-enabled public problem reporting. Route complaints to the right department — in seconds.</p>
+
+        <button class="btn citizen" onclick="goLogin()">Citizen Login</button>
+        <button class="btn admin" onclick="goAdmin()">Admin Login</button>
+        <button class="btn pilot" onclick="goPilot()">Government Pilot Portal</button>
+    </section>
+
+    <div class="pilot-box">
+        <strong>Gov Tech Pilot Program Active!</strong>
+        Local municipal bodies can apply to test CityFix in their area.
+    </div>
+
+    <h2 class="section-title">Common Issues Citizens Report</h2>
+    <div class="icon-grid">
+        <div class="icon-card"><span>🗑️</span>Garbage</div>
+        <div class="icon-card"><span>💡</span>Streetlights</div>
+        <div class="icon-card"><span>🕳️</span>Potholes</div>
+        <div class="icon-card"><span>🚱</span>Water Leak</div>
+        <div class="icon-card"><span>🐕</span>Stray Animals</div>
+        <div class="icon-card"><span>🚧</span>Road Damage</div>
+    </div>
+
+    <footer>© 2025 CityFix | Smart Urban Services</footer>
+
+    <script>
+        if (localStorage.getItem("userLogged") === "true") { window.location.href = "report.html"; }
+        if (localStorage.getItem("adminLogged") === "true") { window.location.href = "admin.html"; }
+
+        function goLogin() { window.location.href = "login.html"; }
+        function goAdmin() { window.location.href = "admin-login.html"; }
+        function goPilot() { window.location.href = "gov-register.html"; }
+    </script>
+
+</body>
+
+</html>

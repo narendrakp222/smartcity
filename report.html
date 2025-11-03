@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>CityFix — Report Issue</title>
+    <style>
+        body {
+            font-family: Poppins, system-ui;
+            background: linear-gradient(180deg, #f0f6fb, #e6ecf5);
+            margin: 0;
+            padding: 18px;
+            color: #0b1220
+        }
+
+        .box {
+            max-width: 780px;
+            margin: 18px auto;
+            background: #fff;
+            padding: 18px;
+            border-radius: 12px;
+            box-shadow: 8px 8px 20px rgba(0, 0, 0, 0.06)
+        }
+
+        h2 {
+            margin: 0 0 10px
+        }
+
+        label {
+            display: block;
+            margin-top: 12px;
+            font-weight: 600
+        }
+
+        input[type=text],
+        textarea,
+        select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #d6dbe3
+        }
+
+        textarea {
+            min-height: 110px;
+            resize: vertical
+        }
+
+        .row {
+            display: flex;
+            gap: 10px
+        }
+
+        .small {
+            font-size: 13px;
+            color: #556
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 14px;
+            border-radius: 8px;
+            background: #2b82ff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-top: 12px
+        }
+
+        .btn.gray {
+            background: #ccd6e9;
+            color: #1b2a44
+        }
+
+        #preview {
+            width: 100%;
+            max-height: 320px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-top: 8px
+        }
+
+        #map {
+            height: 300px;
+            border-radius: 8px;
+            background: #eef4ff;
+            border: 1px dashed #c6d6ea;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #5a6b80;
+            margin-top: 8px
+        }
+
+        .controls {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 8px
+        }
+
+        .muted {
+            color: #667;
+            font-size: 13px
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="box">
+        <h2>Report an Issue</h2>
+        <div class="small">Provide photo, location and a short description so the city can act quickly.</div>
+
+        <label>Photo (optional)</label>
+        <input type="file" id="photo" accept="image/*">
+        <img id="preview" style="display:none">
+
+        <label>Title</label>
+        <input type="text" id="title" placeholder="Broken streetlight near Main St">
+
+        <label>Description</label>
+        <textarea id="desc" placeholder="Describe the problem briefly"></textarea>
+
+        <label>Category</label>
+        <select id="category">
+            <option>Road</option>
+            <option>Garbage</option>
+            <option>Streetlight</option>
+            <option>Water Drainage</option>
+            <option>Other</option>
+        </select>
+
+        <label>Location</label>
+        <div class="controls">
+            <button id="gpsBtn" class="btn gray">Use GPS</button>
+            <input type="text" id="placeSearch" placeholder="Search address or place (press Enter)">
+            <button id="pickMap" class="btn gray">Open Map Picker</button>
+        </div>
+        <div id="map">Map preview will show here after selection or GPS</div>
+        <input type="text" id="locText" placeholder="Editable: area / address / coordinates" style="margin-top:8px">
+
+        <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="btn" id="submitBtn">Submit Report</button>
+            <button class="btn gray" onclick="cancel()">Cancel</button>
+        </div>
+
+        <div style="margin-top:12px" class="muted">
+            Tip: Use GPS for precise coordinates or search an address. "Map Picker" opens Google Maps in a new tab —
+            choose a point and paste coordinates/address back into the Location field.
+        </div>
+    </div>
+
+    <script>
+        /* Keys */
+        const REPORT_KEY = 'reports';
+        const NOTIF_KEY = 'notifications';
+        const ACTIVE_KEY = 'activeUser';
+        const GOV_KEY = 'govPartners';
+
+        /* Helpers */
+        function getActive() { return JSON.parse(localStorage.getItem(ACTIVE_KEY) || 'null'); }
+        function getReports() { return JSON.parse(localStorage.getItem(REPORT_KEY) || '[]'); }
+        function saveReports(r) { localStorage.setItem(REPORT_KEY, JSON.stringify(r)); }
+        function getNotifs() { return JSON.parse(localStorage.getItem(NOTIF_KEY) || '[]'); }
+        function saveNotifs(n) { localStorage.setItem(NOTIF_KEY, JSON.stringify(n)); }
+
+        const me = getActive();
+        if (!me) { alert('Please login to report'); location.href = 'login.html'; }
+
+        /* Image preview */
+        let photoData = '';
+        document.getElementById('photo').addEventListener('change', e => {
+            const f = e.target.files[0];
+            if (!f) return;
+            const r = new FileReader();
+            r.onload = () => { photoData = r.result; const img = document.getElementById('preview'); img.src = photoData; img.style.display = 'block'; }
+            r.readAsDataURL(f);
+        });
+
+        /* Map / GPS functions */
+
+        // show map iframe in the preview area (using Google Maps embed)
+        function showMapPreview(q) {
+            const el = document.getElementById('map');
+            // if q looks like "lat,lon" show map centered there
+            if (/^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/.test(q.trim())) {
+                const [lat, lon] = q.split(',').map(s => s.trim());
+                el.innerHTML = `<iframe width="100%" height="100%" frameborder="0" src="https://maps.google.com/maps?q=${encodeURIComponent(lat + ',' + lon)}&z=16&output=embed"></iframe>`;
+                return;
+            }
+            // otherwise search by query
+            el.innerHTML = `<iframe width="100%" height="100%" frameborder="0" src="https://maps.google.com/maps?q=${encodeURIComponent(q)}&z=14&output=embed"></iframe>`;
+        }
+
+        // GPS button
+        document.getElementById('gpsBtn').addEventListener('click', () => {
+            if (!navigator.geolocation) { alert('Geolocation not supported'); return; }
+            document.getElementById('map').innerText = 'Detecting location…';
+            navigator.geolocation.getCurrentPosition(pos => {
+                const lat = pos.coords.latitude.toFixed(6);
+                const lon = pos.coords.longitude.toFixed(6);
+                const coord = `${lat},${lon}`;
+                document.getElementById('locText').value = coord;
+                showMapPreview(coord);
+            }, err => {
+                document.getElementById('map').innerText = 'Location blocked — enter address manually';
+            }, { timeout: 10000 });
+        });
+
+        // place search (press enter)
+        document.getElementById('placeSearch').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const q = e.target.value.trim();
+                if (!q) return;
+                document.getElementById('locText').value = q;
+                showMapPreview(q);
+            }
+        });
+
+        // map picker opens google maps in new tab — user can click a point and copy coordinates back (prototype)
+        document.getElementById('pickMap').addEventListener('click', () => {
+            // opens google maps centered roughly on user or world
+            const last = document.getElementById('locText').value || '';
+            const q = last || '';
+            const url = q ? `https://www.google.com/maps/search/${encodeURIComponent(q)}` : 'https://www.google.com/maps';
+            window.open(url, '_blank');
+        });
+
+        /* Department routing */
+        function assignDepartment(category, location) {
+            const map = {
+                "Road": "Public Works Department",
+                "Garbage": "Municipal Sanitation Dept",
+                "Streetlight": "Electrical Maintenance Dept",
+                "Water Drainage": "Water & Sewage Board",
+                "Other": "General City Office"
+            };
+            const loc = (location || '').toLowerCase();
+            // simple example: industrial area routing
+            if (loc.includes('industrial') && category === 'Garbage') return 'Industrial Waste Dept';
+            return map[category] || 'General City Office';
+        }
+
+        /* Submit report — auto notifications (instant simulation) */
+        document.getElementById('submitBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            const title = (document.getElementById('title').value || '').trim();
+            const desc = (document.getElementById('desc').value || '').trim();
+            const category = document.getElementById('category').value;
+            const location = (document.getElementById('locText').value || '').trim();
+
+            if (!title || !desc) {
+                alert('Please fill title and description'); return;
+            }
+
+            // pilot gating: if pilot partners exist and have Approved zones, allow only if location matches zone (simple contains)
+            const govs = JSON.parse(localStorage.getItem(GOV_KEY) || '[]');
+            const approved = govs.filter(g => g.status === 'Approved');
+            if (approved.length > 0) {
+                // check at least one approved zone that matches (simple substring) OR allow if reporter is in same city name (this is prototype logic)
+                const found = approved.some(p => {
+                    const z = (p.zone || '').toLowerCase();
+                    const city = (p.city || '').toLowerCase();
+                    const locLower = location.toLowerCase();
+                    return (z && locLower.includes(z)) || (city && locLower.includes(city));
+                });
+                if (!found) {
+                    if (!confirm('This pilot is active in certain zones. Your entered location may be outside pilot area. Submit anyway?')) {
+                        return;
+                    }
+                }
+            }
+
+            const id = 'R' + Date.now();
+            const dept = assignDepartment(category, location);
+            const rec = {
+                id, title, desc, category,
+                userEmail: me.email, name: me.name || '',
+                photo: photoData,
+                location, department: dept,
+                status: 'Pending',
+                createdAt: new Date().toISOString()
+            };
+
+            // save
+            const reports = getReports();
+            reports.push(rec);
+            saveReports(reports);
+
+            // notifications: simulation mode (instant)
+            const nots = getNotifs();
+            nots.push({
+                id: 'N' + Date.now(),
+                email: me.email,
+                reportId: id,
+                message: `✅ Your report "${title}" has been received and routed to ${dept}.`,
+                time: new Date().toLocaleString(),
+                read: false
+            });
+            // also push an "Assigned" notice immediately to simulate routing acknowledgement
+            nots.push({
+                id: 'N' + (Date.now() + 1),
+                email: me.email,
+                reportId: id,
+                message: `📎 ${dept} acknowledged receipt of the report. Status: Pending.`,
+                time: new Date().toLocaleString(),
+                read: false
+            });
+            saveNotifs(nots);
+
+            alert('Report submitted — routed to: ' + dept);
+            location.href = 'my-reports.html';
+        });
+
+        function cancel() { location.href = 'dashboard.html'; }
+    </script>
+</body>
+
+</html>

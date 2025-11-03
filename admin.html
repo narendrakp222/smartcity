@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>CityFix · Admin Dashboard</title>
+<style>
+  :root{
+    --bg:#07101a; --card:#0e1823; --muted:#9fb0c6; --accent:#4af; --accent2:#ff9f43;
+    --glass: rgba(255,255,255,0.03);
+  }
+  *{box-sizing:border-box;font-family:Poppins,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;}
+  body{margin:0;background:linear-gradient(180deg,#04101a,#06212b);color:#dbeefc;min-height:100vh;}
+  header{display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid rgba(255,255,255,0.03);}
+  .brand{display:flex;gap:12px;align-items:center}
+  .logo{font-weight:800;font-size:20px;background:linear-gradient(90deg,var(--accent),#7fffd4);-webkit-background-clip:text;color:transparent;}
+  .hdr-actions{display:flex;gap:10px;align-items:center}
+  .btn{background:var(--card);border:1px solid rgba(255,255,255,0.04);padding:8px 12px;border-radius:10px;color:var(--muted);cursor:pointer}
+  .btn:hover{transform:translateY(-2px)}
+  main{padding:22px;max-width:1200px;margin:18px auto}
+  .top-row{display:grid;grid-template-columns:1fr 360px;gap:18px;margin-bottom:18px}
+  .cards{display:flex;gap:12px;flex-wrap:wrap}
+  .stat{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));padding:16px;border-radius:12px;min-width:160px;box-shadow:8px 8px 24px rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.02)}
+  .stat h3{margin:0;font-size:18px;color:#fff}
+  .stat p{margin:6px 0 0;color:var(--muted);font-size:13px}
+  .right-panel{background:var(--card);padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.03)}
+  .chart-wrap{display:flex;flex-direction:column;align-items:center;gap:8px}
+  canvas{background:transparent;border-radius:8px}
+  .controls{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap}
+  input[type="search"], select, input[type="date"]{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.05);background:rgba(255,255,255,0.02);color:var(--muted)}
+  table{width:100%;border-collapse:collapse;margin-top:12px}
+  th,td{padding:10px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.03);font-size:13px;color:var(--muted)}
+  th{color:#bfe8ff;letter-spacing:0.2px}
+  .thumb{width:90px;height:60px;object-fit:cover;border-radius:6px;border:1px solid rgba(255,255,255,0.04)}
+  .status-pill{padding:6px 10px;border-radius:10px;font-weight:700;font-size:12px}
+  .st-pending{background:#fff6dc;color:#7a5e00}
+  .st-progress{background:#dff1ff;color:#004a66}
+  .st-resolved{background:#e8ffe8;color:#0b5e18}
+  .action-btn{background:transparent;border:none;color:var(--muted);cursor:pointer}
+  .small{font-size:12px;color:var(--muted)}
+  .flex{display:flex;gap:8px;align-items:center}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;padding:18px}
+  .modal .card{background:var(--card);padding:14px;border-radius:12px;max-width:760px;width:100%;border:1px solid rgba(255,255,255,0.04)}
+  .modal img{max-width:100%;border-radius:8px;display:block;margin-bottom:10px}
+  .footer{margin-top:22px;text-align:center;color:rgba(255,255,255,0.35);font-size:13px}
+  @media (max-width:900px){ .top-row{grid-template-columns:1fr} .cards{justify-content:space-between} .thumb{width:80px;height:56px}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="logo">CityFix Admin</div>
+    <div class="small" style="font-size:13px;color:var(--muted)">Control Center</div>
+  </div>
+  <div class="hdr-actions">
+    <div class="small" id="adminEmailDisplay"></div>
+    <button class="btn" onclick="exportCSV()">Export CSV</button>
+    <button class="btn" onclick="deleteAll()">Delete All</button>
+    <button class="btn" onclick="adminLogout()">Logout</button>
+  </div>
+</header>
+
+<main>
+
+  <div class="top-row">
+    <div>
+      <div class="cards" id="statsRow">
+        <div class="stat">
+          <h3 id="totalCount">0</h3>
+          <p>Total Reports</p>
+        </div>
+        <div class="stat">
+          <h3 id="pendingCount">0</h3>
+          <p>Pending</p>
+        </div>
+        <div class="stat">
+          <h3 id="progressCount">0</h3>
+          <p>In-Progress</p>
+        </div>
+        <div class="stat">
+          <h3 id="resolvedCount">0</h3>
+          <p>Resolved</p>
+        </div>
+      </div>
+
+      <div style="margin-top:14px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.02)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div>
+            <strong style="color:#dff">Reports</strong>
+            <div class="small">Manage and update complaints</div>
+          </div>
+          <div class="small" id="lastUpdated">—</div>
+        </div>
+
+        <div class="controls">
+          <input id="search" type="search" placeholder="Search title, user, location" oninput="renderTable()" />
+          <select id="filterStatus" onchange="renderTable()">
+            <option value="">All Status</option>
+            <option value="Pending">Pending</option>
+            <option value="In-Progress">In-Progress</option>
+            <option value="Resolved">Resolved</option>
+          </select>
+          <select id="filterCategory" onchange="renderTable()">
+            <option value="">All Categories</option>
+            <option>Road</option>
+            <option>Garbage</option>
+            <option>Streetlight</option>
+            <option>Water Drainage</option>
+            <option>Other</option>
+          </select>
+          <input id="fromDate" type="date" onchange="renderTable()" />
+          <input id="toDate" type="date" onchange="renderTable()" />
+        </div>
+
+        <table id="reportsTable">
+          <thead>
+            <tr><th>ID</th><th>Photo</th><th>Title</th><th>User</th><th>Category</th><th>Location</th><th>Status</th><th>Action</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <aside class="right-panel">
+      <div class="chart-wrap">
+        <canvas id="pieChart" width="300" height="220"></canvas>
+        <div class="small">Status distribution</div>
+      </div>
+      <div style="margin-top:12px">
+        <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-size:13px;color:#cfe">Quick Filters</div>
+            <div class="small">One-click status filter</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <button class="btn" onclick="quickFilter('')">All</button>
+          <button class="btn" onclick="quickFilter('Pending')">Pending</button>
+          <button class="btn" onclick="quickFilter('In-Progress')">In-Progress</button>
+          <button class="btn" onclick="quickFilter('Resolved')">Resolved</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="footer">CityFix Admin Console — Local Prototype (LocalStorage)</div>
+</main>
+
+<!-- Modal -->
+<div class="modal" id="viewModal">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <strong id="mTitle"></strong>
+      <button class="btn" onclick="closeModal()">Close</button>
+    </div>
+    <div style="margin-top:10px"><img id="mImg" src="" alt="photo"></div>
+    <div style="margin-top:8px;color:var(--muted)"><div id="mDesc"></div><div style="margin-top:6px" id="mMeta" class="small"></div></div>
+    <div style="margin-top:10px"><a id="mMap" target="_blank" class="small" href="#">Open in Maps</a></div>
+    <div style="margin-top:12px">
+      <select id="mStatus" onchange="modalChangeStatus()">
+        <option>Pending</option><option>In-Progress</option><option>Resolved</option>
+      </select>
+      <button class="btn" style="margin-left:8px" onclick="modalSave()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ------------------ Admin guard ------------------ */
+if(localStorage.getItem('adminLogged')!=='true'){
+  alert('Admin authentication required');
+  location.href='admin-login.html';
+}
+document.getElementById('adminEmailDisplay').innerText = (localStorage.getItem('adminEmail') || 'admin@city.com');
+
+/* ------------------ Utilities ------------------ */
+const STORAGE_KEY = 'reports';
+
+function ensureIdsAndNormalize(){
+  const arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  let changed=false;
+  for(let i=0;i<arr.length;i++){
+    if(!arr[i].id){ arr[i].id = 'R'+(Date.now()+i); changed=true; }
+    if(!arr[i].createdAt){ arr[i].createdAt = new Date().toISOString(); changed=true; }
+  }
+  if(changed) localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+  return arr;
+}
+
+function saveReports(arr){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+}
+
+/* ------------------ Stats & Chart ------------------ */
+function updateStats(reports){
+  const total = reports.length;
+  const pending = reports.filter(r=>r.status==='Pending').length;
+  const progress = reports.filter(r=>r.status==='In-Progress').length;
+  const resolved = reports.filter(r=>r.status==='Resolved').length;
+
+  document.getElementById('totalCount').innerText = total;
+  document.getElementById('pendingCount').innerText = pending;
+  document.getElementById('progressCount').innerText = progress;
+  document.getElementById('resolvedCount').innerText = resolved;
+  document.getElementById('lastUpdated').innerText = 'Updated: ' + new Date().toLocaleString();
+
+  // pie chart draw
+  drawPie([pending, progress, resolved]);
+}
+
+/* simple pie chart (canvas) */
+function drawPie(values){
+  const canvas = document.getElementById('pieChart');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const total = values.reduce((a,b)=>a+b,0) || 1;
+  const colors = ['#ffe07a','#8ed0ff','#8aff9f'];
+  let start= -0.5 * Math.PI;
+  const cx = canvas.width/2;
+  const cy = canvas.height/2;
+  const radius = Math.min(cx,cy)-10;
+
+  // slices
+  for(let i=0;i<values.length;i++){
+    const slice = values[i];
+    const angle = (slice/total) * Math.PI*2;
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,radius,start,start+angle);
+    ctx.closePath();
+    ctx.fillStyle = colors[i];
+    ctx.fill();
+    start += angle;
+  }
+
+  // center text
+  ctx.fillStyle = '#dff';
+  ctx.font = '14px Poppins';
+  ctx.textAlign='center';
+  ctx.fillText('Status',cx,cy-4);
+  ctx.font='12px Poppins';
+  ctx.fillStyle='#aee';
+  ctx.fillText(`${values[0]} P • ${values[1]} I • ${values[2]} R`,cx,cy+14);
+}
+
+/* ------------------ Table render ------------------ */
+function renderTable(){
+  let reports = ensureIdsAndNormalize();
+  const tbody = document.querySelector('#reportsTable tbody');
+  const search = document.getElementById('search').value.trim().toLowerCase();
+  const status = document.getElementById('filterStatus').value;
+  const cat = document.getElementById('filterCategory').value;
+  const from = document.getElementById('fromDate').value;
+  const to = document.getElementById('toDate').value;
+
+  // filter
+  let filtered = reports.filter(r=>{
+    if(status && r.status !== status) return false;
+    if(cat && r.category !== cat) return false;
+    if(search){
+      const hay = (r.title+' '+r.user+' '+(r.location||'')+' '+r.category).toLowerCase();
+      if(!hay.includes(search)) return false;
+    }
+    if(from){
+      if(new Date(r.createdAt) < new Date(from)) return false;
+    }
+    if(to){
+      // include full day
+      const dayEnd = new Date(to); dayEnd.setHours(23,59,59,999);
+      if(new Date(r.createdAt) > dayEnd) return false;
+    }
+    return true;
+  });
+
+  updateStats(reports);
+
+  // render rows
+  tbody.innerHTML = '';
+  if(filtered.length===0){ tbody.innerHTML = '<tr><td colspan="8" style="padding:14px;color:var(--muted)">No reports</td></tr>'; return; }
+
+  filtered.slice().reverse().forEach(r=>{
+    const tr = document.createElement('tr');
+
+    // status pill
+    const cls = r.status === 'Pending' ? 'st-pending' : (r.status === 'In-Progress' ? 'st-progress' : 'st-resolved');
+
+    tr.innerHTML = `
+      <td>${r.id}</td>
+      <td><img class="thumb" src="${r.photo||''}" onerror="this.style.display='none'"></td>
+      <td><strong style="color:#eaffff">${escapeHtml(r.title)}</strong><div class="small">${new Date(r.createdAt).toLocaleString()}</div></td>
+      <td>${escapeHtml(r.name||r.user||'—')}</td>
+      <td>${escapeHtml(r.category||'—')}</td>
+      <td class="small">${escapeHtml(r.location||'—')}</td>
+      <td><span class="status-pill ${cls}">${r.status}</span></td>
+      <td class="flex">
+         <button class="action-btn" onclick="viewReport('${r.id}')">View</button>
+         <select onchange="changeStatus('${r.id}', this.value)">
+           <option ${r.status==='Pending'?'selected':''}>Pending</option>
+           <option ${r.status==='In-Progress'?'selected':''}>In-Progress</option>
+           <option ${r.status==='Resolved'?'selected':''}>Resolved</option>
+         </select>
+         <button class="action-btn" onclick="deleteReport('${r.id}')">Delete</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+/* ------------------ Actions ------------------ */
+function changeStatus(id, newStatus){
+  let arr = JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+  const idx = arr.findIndex(x=>x.id===id);
+  if(idx===-1) return alert('Not found');
+  arr[idx].status = newStatus;
+  arr[idx].updatedAt = new Date().toISOString();
+  saveReports(arr);
+  renderTable();
+}
+
+function deleteReport(id){
+  if(!confirm('Delete report '+id+' ?')) return;
+  let arr = JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+  arr = arr.filter(x=>x.id!==id);
+  saveReports(arr);
+  renderTable();
+}
+
+function viewReport(id){
+  const arr = ensureIdsAndNormalize();
+  const r = arr.find(x=>x.id===id);
+  if(!r) return;
+  document.getElementById('mTitle').innerText = r.title;
+  document.getElementById('mImg').src = r.photo || '';
+  document.getElementById('mDesc').innerText = r.desc || '';
+  document.getElementById('mMeta').innerText = `By ${r.name||r.user||'—'} • ${new Date(r.createdAt).toLocaleString()}`;
+  const mapLink = r.location ? `https://maps.google.com/?q=${encodeURIComponent(r.location)}` : '#';
+  document.getElementById('mMap').href = mapLink;
+  document.getElementById('mStatus').value = r.status;
+  document.getElementById('viewModal').style.display = 'flex';
+  // store current modal id
+  document.getElementById('viewModal').dataset.currentId = id;
+}
+function closeModal(){ document.getElementById('viewModal').style.display='none'; }
+function modalChangeStatus(){ /* placeholder */ }
+function modalSave(){
+  const id = document.getElementById('viewModal').dataset.currentId;
+  const val = document.getElementById('mStatus').value;
+  changeStatus(id, val);
+  closeModal();
+}
+
+/* ------------------ CSV export / helpers ------------------ */
+function exportCSV(){
+  const arr = ensureIdsAndNormalize();
+  if(!arr.length) return alert('No reports');
+  const header = ['id','title','name','user','category','location','status','createdAt'];
+  const rows = arr.map(r => header.map(h => `"${String(r[h]||'').replace(/"/g,'""')}"`).join(','));
+  const csv = [header.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'cityfix_reports.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function deleteAll(){
+  if(!confirm('Delete ALL reports? This cannot be undone.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  renderTable();
+}
+
+/* ------------------ Quick filters ------------------ */
+function quickFilter(s){
+  document.getElementById('filterStatus').value = s;
+  renderTable();
+}
+
+/* ------------------ Misc ------------------ */
+function adminLogout(){
+  localStorage.removeItem('adminLogged');
+  localStorage.removeItem('adminEmail');
+  location.href='index.html';
+}
+function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ------------------ Init ------------------ */
+(function init(){
+  ensureIdsAndNormalize();
+  renderTable();
+})();
+
+function changeStatus(id, newStatus){
+  let arr = JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+  const idx = arr.findIndex(x=>x.id===id);
+  if(idx===-1) return alert('Not found');
+
+  const old = arr[idx].status;
+  arr[idx].status = newStatus;
+  arr[idx].updatedAt = new Date().toISOString();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+
+  // create notification for the reporter
+  const notes = JSON.parse(localStorage.getItem('notifications') || '[]');
+  const messageMap = {
+    'Pending': `Your report "${arr[idx].title}" is marked Pending.`,
+    'In-Progress': `🚧 A team has been dispatched for "${arr[idx].title}".`,
+    'Resolved': `✅ Your report "${arr[idx].title}" has been resolved. Thank you!`
+  };
+  notes.push({
+    id: 'N'+Date.now(),
+    email: arr[idx].userEmail || arr[idx].user || arr[idx].name || '',
+    reportId: id,
+    message: messageMap[newStatus] || `Status updated to ${newStatus}`,
+    time: new Date().toLocaleString(),
+    read: false
+  });
+  localStorage.setItem('notifications', JSON.stringify(notes));
+
+  // refresh UI
+  renderTable();
+  alert('Status updated and reporter notified.');
+}
+
+
+
+
+
+</script>
+
+</body>
+</html>

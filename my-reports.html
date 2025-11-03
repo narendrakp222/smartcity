@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>My Reports — CityFix</title>
+    <style>
+        body {
+            font-family: Poppins;
+            background: #f3f7fb;
+            margin: 0;
+            padding: 18px;
+            color: #102132
+        }
+
+        .wrap {
+            max-width: 920px;
+            margin: 18px auto
+        }
+
+        .top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px
+        }
+
+        .card {
+            background: #fff;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            box-shadow: 6px 8px 18px rgba(15, 30, 50, 0.06)
+        }
+
+        .thumb {
+            width: 160px;
+            height: 110px;
+            object-fit: cover;
+            border-radius: 8px
+        }
+
+        .flex {
+            display: flex;
+            gap: 12px
+        }
+
+        .status {
+            padding: 6px 10px;
+            border-radius: 10px;
+            font-weight: 700
+        }
+
+        .st-pend {
+            background: #fff6dc;
+            color: #7a5e00
+        }
+
+        .st-prog {
+            background: #dff1ff;
+            color: #004a66
+        }
+
+        .st-res {
+            background: #e8ffe8;
+            color: #0b5e18
+        }
+
+        .notif {
+            background: #fffbe6;
+            padding: 10px;
+            border-left: 4px solid #ffd27a;
+            margin-bottom: 12px;
+            border-radius: 8px
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <div class="top">
+            <h2>My Reports</h2>
+            <div>
+                <a href="dashboard.html">← Back</a>
+            </div>
+        </div>
+
+        <div id="notifArea"></div>
+
+        <div id="list"></div>
+    </div>
+
+    <script>
+        const ACTIVE_KEY = 'activeUser', REPORT_KEY = 'reports', NOTIF_KEY = 'notifications';
+        function getActive() { return JSON.parse(localStorage.getItem(ACTIVE_KEY) || 'null'); }
+        function getReports() { return JSON.parse(localStorage.getItem(REPORT_KEY) || '[]'); }
+        function getNotifs() { return JSON.parse(localStorage.getItem(NOTIF_KEY) || '[]'); }
+
+        const me = getActive();
+        if (!me) { alert('Please login'); location.href = 'login.html'; }
+
+        // show notifications for this user
+        function renderNotifications() {
+            const nots = getNotifs().filter(n => n.email === me.email).sort((a, b) => b.time.localeCompare(a.time));
+            if (nots.length === 0) { document.getElementById('notifArea').innerHTML = ''; return; }
+            let html = '<div class="notif"><strong>Notifications</strong><ul>';
+            nots.forEach(n => html += `<li style="margin:6px 0">${n.time} — ${n.message}</li>`);
+            html += '</ul></div>';
+            document.getElementById('notifArea').innerHTML = html;
+        }
+
+        // show reports
+        function renderList() {
+            const reports = getReports().filter(r => r.userEmail === me.email).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+            const c = document.getElementById('list'); c.innerHTML = '';
+            if (reports.length === 0) { c.innerHTML = '<div class="card">No reports yet. <a href="report.html">Report now</a></div>'; return; }
+            reports.forEach(r => {
+                const div = document.createElement('div'); div.className = 'card';
+                div.innerHTML = `
+      <div style="display:flex;gap:12px">
+        ${r.photo ? `<img class="thumb" src="${r.photo}">` : `<div style="width:160px;height:110px;background:#eef;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#667">No image</div>`}
+        <div style="flex:1">
+          <h3 style="margin:0">${escapeHtml(r.title)}</h3>
+          <div class="small">${r.category} • ${r.department}</div>
+          <p style="margin:8px 0">${escapeHtml(r.desc)}</p>
+          <div style="display:flex;gap:8px;align-items:center">
+            <div class="status ${r.status === 'Pending' ? 'st-pend' : r.status === 'In-Progress' ? 'st-prog' : 'st-res'}">${r.status}</div>
+            <div class="small">Submitted: ${new Date(r.createdAt).toLocaleString()}</div>
+          </div>
+        </div>
+      </div>`;
+                c.appendChild(div);
+            });
+        }
+
+        function escapeHtml(s) { if (!s) return ''; return ('' + s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+        renderNotifications();
+        renderList();
+    </script>
+</body>
+
+</html>

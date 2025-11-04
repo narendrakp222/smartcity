@@ -185,7 +185,7 @@
         <p>AI-enabled public problem reporting. Route complaints to the right department — in seconds.</p>
 
         <button class="btn citizen" onclick="goLogin()">Citizen Login</button>
-        <button class="btn admin" onclick="goAdmin()">Admin Login</button>
+        <button class="btn admin" onclick="goAdmin()">Admin Dashboard</button>
         <button class="btn pilot" onclick="goPilot()">Government Pilot Portal</button>
     </section>
 
@@ -211,7 +211,7 @@
         if (localStorage.getItem("adminLogged") === "true") { window.location.href = "admin.html"; }
 
         function goLogin() { window.location.href = "login.html"; }
-        function goAdmin() { window.location.href = "admin-login.html"; }
+        function goAdmin() { window.location.href = "admin.html"; }
         function goPilot() { window.location.href = "gov-register.html"; }
     </script>
 

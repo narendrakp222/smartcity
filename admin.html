@@ -57,7 +57,9 @@
     <div class="small" id="adminEmailDisplay"></div>
     <button class="btn" onclick="exportCSV()">Export CSV</button>
     <button class="btn" onclick="deleteAll()">Delete All</button>
-    <button class="btn" onclick="adminLogout()">Logout</button>
+    <button class="btn gray" onclick="goHome()">🏠 Home</button>
+
+    <!-- <button class="btn" onclick="adminLogout()">Logout</button> -->
   </div>
 </header>
 
@@ -168,10 +170,27 @@
 
 <script>
 /* ------------------ Admin guard ------------------ */
-if(localStorage.getItem('adminLogged')!=='true'){
-  alert('Admin authentication required');
-  location.href='admin-login.html';
+function adminLogin(){
+  const email = document.getElementById("adminEmail").value.trim();
+  const pass  = document.getElementById("adminPass").value.trim();
+
+  if(email === "admin@gmail.com" && pass === "admin123"){
+
+    // ✅ set login flag so admin-dashboard stops redirect loop
+    localStorage.setItem("adminLogged", "true");
+    localStorage.setItem("adminEmail", email);
+
+    // ✅ clear citizen login to avoid conflict
+    localStorage.removeItem("userLogged");
+    localStorage.removeItem("activeUser");
+
+    // ✅ go to dashboard
+    window.location.href = "admin-dashboard.html";
+  } else {
+    alert("Invalid Admin Credentials");
+  }
 }
+
 document.getElementById('adminEmailDisplay').innerText = (localStorage.getItem('adminEmail') || 'admin@city.com');
 
 /* ------------------ Utilities ------------------ */
@@ -379,8 +398,9 @@ function quickFilter(s){
 function adminLogout(){
   localStorage.removeItem('adminLogged');
   localStorage.removeItem('adminEmail');
-  location.href='index.html';
+  location.href='admin-login.html'; // ✅ Go back to login
 }
+
 function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 /* ------------------ Init ------------------ */
@@ -419,6 +439,14 @@ function changeStatus(id, newStatus){
   // refresh UI
   renderTable();
   alert('Status updated and reporter notified.');
+}
+function goHome() {
+    // If already on index, force load
+    if (window.location.pathname.includes("index.html") || window.location.pathname.endsWith("/")) {
+        window.location.href = "./index.html";
+    } else {
+        window.location.href = "index.html";
+    }
 }
 
 

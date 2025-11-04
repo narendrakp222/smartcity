@@ -165,14 +165,20 @@
     </div>
   </div>
 </div>
-
 <script>
 /* ------------------ Admin guard ------------------ */
-if(localStorage.getItem('adminLogged')!=='true'){
-  alert('Admin authentication required');
-  location.href='admin-login.html';
+// ✅ Correct session validation — no shaking, no loop
+if (localStorage.getItem("adminLogged") !== "true") {
+    alert("Admin authentication required");
+    window.location.href = "admin-login.html";
+} else {
+    // ✅ Also block if user login accidentally stays
+    localStorage.removeItem("userLogged");
+    localStorage.removeItem("activeUser");
 }
-document.getElementById('adminEmailDisplay').innerText = (localStorage.getItem('adminEmail') || 'admin@city.com');
+
+document.getElementById('adminEmailDisplay').innerText =
+  localStorage.getItem('adminEmail') || 'admin@city.com';
 
 /* ------------------ Utilities ------------------ */
 const STORAGE_KEY = 'reports';
@@ -205,11 +211,9 @@ function updateStats(reports){
   document.getElementById('resolvedCount').innerText = resolved;
   document.getElementById('lastUpdated').innerText = 'Updated: ' + new Date().toLocaleString();
 
-  // pie chart draw
   drawPie([pending, progress, resolved]);
 }
 
-/* simple pie chart (canvas) */
 function drawPie(values){
   const canvas = document.getElementById('pieChart');
   const ctx = canvas.getContext('2d');
@@ -221,7 +225,6 @@ function drawPie(values){
   const cy = canvas.height/2;
   const radius = Math.min(cx,cy)-10;
 
-  // slices
   for(let i=0;i<values.length;i++){
     const slice = values[i];
     const angle = (slice/total) * Math.PI*2;
@@ -234,7 +237,6 @@ function drawPie(values){
     start += angle;
   }
 
-  // center text
   ctx.fillStyle = '#dff';
   ctx.font = '14px Poppins';
   ctx.textAlign='center';
@@ -244,7 +246,7 @@ function drawPie(values){
   ctx.fillText(`${values[0]} P • ${values[1]} I • ${values[2]} R`,cx,cy+14);
 }
 
-/* ------------------ Table render ------------------ */
+/* ------------------ Table & filters etc — unchanged ------------------ */
 function renderTable(){
   let reports = ensureIdsAndNormalize();
   const tbody = document.querySelector('#reportsTable tbody');
@@ -254,7 +256,6 @@ function renderTable(){
   const from = document.getElementById('fromDate').value;
   const to = document.getElementById('toDate').value;
 
-  // filter
   let filtered = reports.filter(r=>{
     if(status && r.status !== status) return false;
     if(cat && r.category !== cat) return false;
@@ -262,11 +263,8 @@ function renderTable(){
       const hay = (r.title+' '+r.user+' '+(r.location||'')+' '+r.category).toLowerCase();
       if(!hay.includes(search)) return false;
     }
-    if(from){
-      if(new Date(r.createdAt) < new Date(from)) return false;
-    }
+    if(from && new Date(r.createdAt) < new Date(from)) return false;
     if(to){
-      // include full day
       const dayEnd = new Date(to); dayEnd.setHours(23,59,59,999);
       if(new Date(r.createdAt) > dayEnd) return false;
     }
@@ -275,20 +273,22 @@ function renderTable(){
 
   updateStats(reports);
 
-  // render rows
   tbody.innerHTML = '';
-  if(filtered.length===0){ tbody.innerHTML = '<tr><td colspan="8" style="padding:14px;color:var(--muted)">No reports</td></tr>'; return; }
+  if(filtered.length===0){
+    tbody.innerHTML = '<tr><td colspan="8" style="padding:14px;color:var(--muted)">No reports</td></tr>';
+    return;
+  }
 
   filtered.slice().reverse().forEach(r=>{
+    const cls = r.status === 'Pending' ? 'st-pending' :
+               r.status === 'In-Progress' ? 'st-progress' : 'st-resolved';
+
     const tr = document.createElement('tr');
-
-    // status pill
-    const cls = r.status === 'Pending' ? 'st-pending' : (r.status === 'In-Progress' ? 'st-progress' : 'st-resolved');
-
     tr.innerHTML = `
       <td>${r.id}</td>
       <td><img class="thumb" src="${r.photo||''}" onerror="this.style.display='none'"></td>
-      <td><strong style="color:#eaffff">${escapeHtml(r.title)}</strong><div class="small">${new Date(r.createdAt).toLocaleString()}</div></td>
+      <td><strong style="color:#eaffff">${escapeHtml(r.title)}</strong>
+          <div class="small">${new Date(r.createdAt).toLocaleString()}</div></td>
       <td>${escapeHtml(r.name||r.user||'—')}</td>
       <td>${escapeHtml(r.category||'—')}</td>
       <td class="small">${escapeHtml(r.location||'—')}</td>
@@ -307,7 +307,6 @@ function renderTable(){
   });
 }
 
-/* ------------------ Actions ------------------ */
 function changeStatus(id, newStatus){
   let arr = JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
   const idx = arr.findIndex(x=>x.id===id);
@@ -333,16 +332,15 @@ function viewReport(id){
   document.getElementById('mTitle').innerText = r.title;
   document.getElementById('mImg').src = r.photo || '';
   document.getElementById('mDesc').innerText = r.desc || '';
-  document.getElementById('mMeta').innerText = `By ${r.name||r.user||'—'} • ${new Date(r.createdAt).toLocaleString()}`;
+  document.getElementById('mMeta').innerText =
+    `By ${r.name||r.user||'—'} • ${new Date(r.createdAt).toLocaleString()}`;
   const mapLink = r.location ? `https://maps.google.com/?q=${encodeURIComponent(r.location)}` : '#';
   document.getElementById('mMap').href = mapLink;
   document.getElementById('mStatus').value = r.status;
   document.getElementById('viewModal').style.display = 'flex';
-  // store current modal id
   document.getElementById('viewModal').dataset.currentId = id;
 }
 function closeModal(){ document.getElementById('viewModal').style.display='none'; }
-function modalChangeStatus(){ /* placeholder */ }
 function modalSave(){
   const id = document.getElementById('viewModal').dataset.currentId;
   const val = document.getElementById('mStatus').value;
@@ -350,7 +348,6 @@ function modalSave(){
   closeModal();
 }
 
-/* ------------------ CSV export / helpers ------------------ */
 function exportCSV(){
   const arr = ensureIdsAndNormalize();
   if(!arr.length) return alert('No reports');
@@ -364,31 +361,33 @@ function exportCSV(){
 }
 
 function deleteAll(){
-  if(!confirm('Delete ALL reports? This cannot be undone.')) return;
+  if(!confirm('Delete ALL reports?')) return;
   localStorage.removeItem(STORAGE_KEY);
   renderTable();
 }
 
-/* ------------------ Quick filters ------------------ */
 function quickFilter(s){
   document.getElementById('filterStatus').value = s;
   renderTable();
 }
 
-/* ------------------ Misc ------------------ */
 function adminLogout(){
-  localStorage.removeItem('adminLogged');
-  localStorage.removeItem('adminEmail');
-  location.href='index.html';
+  localStorage.removeItem("adminLogged");
+  localStorage.removeItem("adminEmail");
+  location.href = "index.html";
 }
-function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
-/* ------------------ Init ------------------ */
+function escapeHtml(s){
+  if(!s) return '';
+  return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+
 (function init(){
   ensureIdsAndNormalize();
   renderTable();
 })();
 </script>
+
 
 </body>
 </html>

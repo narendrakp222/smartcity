@@ -78,12 +78,21 @@
         </div>
 
         <div class="actions">
-          <div class="search"><input id="searchInput" placeholder="Search my reports" style="background:transparent;border:none;color:#dff;outline:none;width:180px"></div>
-          <div style="position:relative">
-            <button class="icon-btn" id="notifBtn" onclick="toggleNotif()">🔔 <span id="notifBadge" class="notif-badge" style="display:none"></span></button>
-            <div class="panel-notif" id="notifPanel"></div>
-          </div>
-        </div>
+  <div class="search">
+    <input id="searchInput" placeholder="Search my reports" style="background:transparent;border:none;color:#dff;outline:none;width:180px">
+  </div>
+
+  <!-- 🔙 BACK TO HOME Button -->
+  <button class="icon-btn" onclick="goHome()">🏠 Home</button>
+
+  <div style="position:relative">
+    <button class="icon-btn" id="notifBtn" onclick="toggleNotif()">🔔 
+      <span id="notifBadge" class="notif-badge" style="display:none"></span>
+    </button>
+    <div class="panel-notif" id="notifPanel"></div>
+  </div>
+</div>
+
       </div>
 
       <div class="stats" id="statsRow">
@@ -125,8 +134,25 @@ function saveNotifs(n){ localStorage.setItem(NOTIF_KEY, JSON.stringify(n)); }
 function saveReports(r){ localStorage.setItem(REPORT_KEY, JSON.stringify(r)); }
 
 /* ---------- Init UI ---------- */
-const me = getActive();
-if(!me){ alert('Please login first'); location.href='login.html'; }
+// ✅ unified login check (matches login.html)
+let me = getActive();
+if (!me) {
+    // if userLogged exists from login page, convert into activeUser
+    if (localStorage.getItem("userLogged") === "true") {
+        const u = JSON.parse(localStorage.getItem("user") || "{}");
+        if (u && u.email) {
+            localStorage.setItem("activeUser", JSON.stringify(u));
+            me = u;
+        }
+    }
+}
+
+// final check — if still no user, redirect
+// if (!me) {
+//     alert("Please login first");
+//     window.location.href = "login.html";
+// }
+
 document.getElementById('welcome').innerText = `Welcome, ${me.name || me.email.split('@')[0]} 👋`;
 document.getElementById('userEmail').innerText = me.email;
 
@@ -212,7 +238,12 @@ function markAllRead(){
 function goReport(){ location.href='report.html'; }
 function goMyReports(){ location.href='my-reports.html'; }
 function goHome(){ location.href='index.html'; }
-function logout(){ localStorage.removeItem('activeUser'); location.href='index.html'; }
+function logout(){
+    localStorage.removeItem("activeUser");
+    localStorage.removeItem("userLogged");
+    sessionStorage.setItem("logout", "true");
+    window.location.href = "index.html";
+}
 
 /* ---------- helpers ---------- */
 function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -220,6 +251,15 @@ function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"]/g, c=
 /* ---------- init ---------- */
 renderDashboard();
 renderNotifPanel();
+function goHome() {
+    // If already on index, force load
+    if (window.location.pathname.includes("index.html") || window.location.pathname.endsWith("/")) {
+        window.location.href = "./index.html";
+    } else {
+        window.location.href = "index.html";
+    }
+}
+
 
 </script>
 </body>

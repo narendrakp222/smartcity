@@ -41,11 +41,6 @@
             border-radius: 8px
         }
 
-        .flex {
-            display: flex;
-            gap: 12px
-        }
-
         .status {
             padding: 6px 10px;
             border-radius: 10px;
@@ -74,70 +69,103 @@
             margin-bottom: 12px;
             border-radius: 8px
         }
+
+        .small {
+            font-size: 13px;
+            color: #687
+        }
     </style>
 </head>
 
 <body>
+    <button class="btn gray" onclick="goHome()">🏠 Home</button>
+
     <div class="wrap">
         <div class="top">
             <h2>My Reports</h2>
-            <div>
-                <a href="dashboard.html">← Back</a>
-            </div>
+            <a href="dashboard.html">← Back</a>
         </div>
 
         <div id="notifArea"></div>
-
         <div id="list"></div>
     </div>
 
     <script>
-        const ACTIVE_KEY = 'activeUser', REPORT_KEY = 'reports', NOTIF_KEY = 'notifications';
-        function getActive() { return JSON.parse(localStorage.getItem(ACTIVE_KEY) || 'null'); }
-        function getReports() { return JSON.parse(localStorage.getItem(REPORT_KEY) || '[]'); }
-        function getNotifs() { return JSON.parse(localStorage.getItem(NOTIF_KEY) || '[]'); }
+        /* --------------- LOGIN CHECK --------------- */
+        const user = JSON.parse(localStorage.getItem("user"));
+        const logged = localStorage.getItem("userLogged");
 
-        const me = getActive();
-        if (!me) { alert('Please login'); location.href = 'login.html'; }
-
-        // show notifications for this user
-        function renderNotifications() {
-            const nots = getNotifs().filter(n => n.email === me.email).sort((a, b) => b.time.localeCompare(a.time));
-            if (nots.length === 0) { document.getElementById('notifArea').innerHTML = ''; return; }
-            let html = '<div class="notif"><strong>Notifications</strong><ul>';
-            nots.forEach(n => html += `<li style="margin:6px 0">${n.time} — ${n.message}</li>`);
-            html += '</ul></div>';
-            document.getElementById('notifArea').innerHTML = html;
+        if (!user || logged !== "true") {
+            alert("Please login first");
+            location.href = "login.html";
         }
 
-        // show reports
+        /* --------------- GET LOCAL DATA --------------- */
+        function getReports() { return JSON.parse(localStorage.getItem("reports") || "[]"); }
+        function getNotifs() { return JSON.parse(localStorage.getItem("notifications") || "[]"); }
+
+        /* --------------- NOTIFICATIONS --------------- */
+        function renderNotifications() {
+            const notes = getNotifs().filter(n => n.email === user.email)
+                .sort((a, b) => new Date(b.time) - new Date(a.time));
+
+            if (notes.length === 0) {
+                document.getElementById("notifArea").innerHTML = "";
+                return;
+            }
+
+            let html = `<div class="notif"><strong>Notifications</strong><ul>`;
+            notes.forEach(n => {
+                html += `<li style="margin:6px 0">${new Date(n.time).toLocaleString()} — ${n.message}</li>`;
+            });
+            html += `</ul></div>`;
+            document.getElementById("notifArea").innerHTML = html;
+        }
+
+        /* --------------- USER REPORT LIST --------------- */
         function renderList() {
-            const reports = getReports().filter(r => r.userEmail === me.email).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-            const c = document.getElementById('list'); c.innerHTML = '';
-            if (reports.length === 0) { c.innerHTML = '<div class="card">No reports yet. <a href="report.html">Report now</a></div>'; return; }
+            const reports = getReports().filter(r => r.userEmail === user.email)
+                .sort((a, b) => new Date(b.time) - new Date(a.time));
+
+            const c = document.getElementById("list");
+            c.innerHTML = "";
+
+            if (reports.length === 0) {
+                c.innerHTML = `<div class="card">No reports yet. <a href="report.html">Report now</a></div>`;
+                return;
+            }
+
             reports.forEach(r => {
-                const div = document.createElement('div'); div.className = 'card';
+                const div = document.createElement("div");
+                div.className = "card";
+
                 div.innerHTML = `
-      <div style="display:flex;gap:12px">
-        ${r.photo ? `<img class="thumb" src="${r.photo}">` : `<div style="width:160px;height:110px;background:#eef;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#667">No image</div>`}
-        <div style="flex:1">
-          <h3 style="margin:0">${escapeHtml(r.title)}</h3>
-          <div class="small">${r.category} • ${r.department}</div>
-          <p style="margin:8px 0">${escapeHtml(r.desc)}</p>
-          <div style="display:flex;gap:8px;align-items:center">
-            <div class="status ${r.status === 'Pending' ? 'st-pend' : r.status === 'In-Progress' ? 'st-prog' : 'st-res'}">${r.status}</div>
-            <div class="small">Submitted: ${new Date(r.createdAt).toLocaleString()}</div>
-          </div>
-        </div>
-      </div>`;
+        <div style="display:flex;gap:12px">
+            ${r.photo ? `<img class="thumb" src="${r.photo}">`
+                        : `<div style="width:160px;height:110px;background:#eef;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#667">No image</div>`}
+            
+            <div style="flex:1">
+                <h3 style="margin:0">${escape(r.issue)}</h3>
+                <p style="margin:6px 0;color:#455">${escape(r.description)}</p>
+                <div style="display:flex;gap:8px;align-items:center">
+                    <span class="status ${r.status === 'Pending' ? 'st-pend' : r.status === 'In-Progress' ? 'st-prog' : 'st-res'}">${r.status}</span>
+                    <div class="small">Submitted: ${new Date(r.time).toLocaleString()}</div>
+                </div>
+            </div>
+        </div>`;
+
                 c.appendChild(div);
             });
         }
 
-        function escapeHtml(s) { if (!s) return ''; return ('' + s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+        function escape(s) { return ("" + s).replace(/[&<>"]/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[m])); }
 
         renderNotifications();
         renderList();
+        function goHome() {
+    window.location.href = "index.html";
+}
+
     </script>
 </body>
 

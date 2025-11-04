@@ -318,11 +318,18 @@
         function cancel() { location.href = 'dashboard.html'; }
        function goHome() {
     // If already on index, force load
-    if (window.location.pathname.includes("index.html") || window.location.pathname.endsWith("/")) {
-        window.location.href = "./index.html";
-    } else {
+    // if (window.location.pathname.includes("index.html") || window.location.pathname.endsWith("/")) {
+    //     window.location.href = "./index.html";
+    // } else {
+    //     window.location.href = "index.html";
+    // }
+    function goHome() {
+    function goHome() {
         window.location.href = "index.html";
     }
+}
+
+
 }
 
 
